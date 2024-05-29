@@ -1,0 +1,78 @@
+version: "3.7"
+services:
+  app1:
+    container_name: app1
+    build:
+      context: ./app
+    mem_reservation: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -m 2 http://localhost"]
+      interval: 30s
+      timeout: 2s
+      retries: 3
+      start_period: 60s
+    environment:
+      PORT: 80
+      APP: app1
+    working_dir: /app
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 90s
+    volumes:
+      - "./logs/app1:/var/log/paystack-api"
+
+  app2:
+    container_name: app2
+    build:
+      context: ./app
+    mem_reservation: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -m 2 http://localhost"]
+      interval: 30s
+      timeout: 2s
+      retries: 3
+      start_period: 60s
+    environment:
+      PORT: 80
+      APP: app2
+    working_dir: /app
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 90s
+    volumes:
+      - "./logs/app2:/var/log/paystack-api"
+
+  nginx-lb:
+    container_name: nginx-lb
+    image: nginx:1.25.3
+    healthcheck:
+      test: ["CMD-SHELL", "curl -m 2 --fail http://localhost"]
+      interval: 30s
+      timeout: 2s
+      retries: 3
+      start_period: 80s
+    mem_reservation: 128m
+    ports:
+      - 8080:80
+    working_dir: /var/www/html
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 90s
+    depends_on:
+      - app1
+      - app2
+    volumes:
+      - "./nginx.conf:/etc/nginx/conf.d/default.conf"
+      - "./logs/nginx-lb:/var/log/nginx"
+    links:
+      - app1
+      - app2
